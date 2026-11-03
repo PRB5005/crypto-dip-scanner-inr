@@ -22,10 +22,25 @@ self.onmessage = function (e) {
   const MIN_GAP_DAYS = 14;
   const MS_PER_DAY = 86400000;
 
+  // Compute trailing 365-day range stats regardless of match count
+  const last365 = history.slice(-365);
+  const prices365 = last365.map((r) => r.close_inr);
+  const min365Inr = Math.min(...prices365);
+  const max365Inr = Math.max(...prices365);
+  const rangePositionPct =
+    max365Inr > min365Inr
+      ? Number(
+          (((currentInrPrice - min365Inr) / (max365Inr - min365Inr)) * 100).toFixed(1)
+        )
+      : 50;
+  const drawdownFromHighPct = Number(
+    (((currentInrPrice - max365Inr) / max365Inr) * 100).toFixed(2)
+  );
+
   const matches = [];
   let lastMatchedDateMs = -Infinity;
 
-  // Exclude the most recent 60 rows because they do not yet have a full 60-day forward outcome
+  // Exclude the most recent 60 rows because they lack a full 60-day forward outcome
   for (let i = 0; i < history.length - FORWARD_DAYS; i++) {
     const row = history[i];
     if (row.drop_30d_pct === null || row.drop_30d_pct === undefined) continue;
@@ -65,7 +80,20 @@ self.onmessage = function (e) {
   }
 
   if (matches.length === 0) {
-    self.postMessage({ matchCount: 0 });
+    self.postMessage({
+      matchCount: 0,
+      drawdown365: {
+        min365Inr,
+        max365Inr,
+        rangePositionPct,
+        drawdownFromHighPct,
+        tranche1Inr: Math.round(currentInrPrice),
+        tranche2Inr: Math.round(currentInrPrice * 0.95),
+        tranche2DipPct: -5,
+        tranche3Inr: Math.round(currentInrPrice * 0.9),
+        tranche3DipPct: -10,
+      },
+    });
     return;
   }
 
@@ -114,6 +142,22 @@ self.onmessage = function (e) {
   const typicalExtraDipDeltaInr =
     typicalExtraDipFloorInr - Math.round(currentInrPrice);
 
+  // Feature 2: 365-Day Drawdown Percentile & DCA Tranche Sizer levels
+  const halfDipPct = Number((typicalExtraDipPct / 2).toFixed(2));
+  const tranche2Inr = Math.round(currentInrPrice * (1 + halfDipPct / 100));
+
+  const drawdown365 = {
+    min365Inr,
+    max365Inr,
+    rangePositionPct,
+    drawdownFromHighPct,
+    tranche1Inr: Math.round(currentInrPrice),
+    tranche2Inr,
+    tranche2DipPct: halfDipPct,
+    tranche3Inr: typicalExtraDipFloorInr,
+    tranche3DipPct: typicalExtraDipPct,
+  };
+
   self.postMessage({
     matchCount: matches.length,
     winRatePct,
@@ -130,6 +174,7 @@ self.onmessage = function (e) {
     p10Inr,
     p50Inr,
     p90Inr,
+    drawdown365,
     matches: matches.slice(-10).reverse(),
   });
 };
