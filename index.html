@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Crypto Dip Scanner (₹ INR)</title>
+  <title>🍵BYCC</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
   <style>
     :root {
@@ -28,7 +28,7 @@
       color: var(--text);
       font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
       line-height: 1.5;
-      padding: 24px 16px 48px;
+      padding: 24px 16px 64px;
     }
 
     .container {
@@ -97,7 +97,7 @@
       font-weight: 600;
     }
 
-    button.scan-btn {
+    button.scan-btn, button.action-btn {
       background-color: var(--button);
       color: #FFF8F0;
       border: 1.5px solid var(--border);
@@ -109,8 +109,19 @@
       transition: opacity 0.15s ease;
     }
 
-    button.scan-btn:hover {
+    button.scan-btn:hover, button.action-btn:hover {
       opacity: 0.92;
+    }
+
+    button.delete-btn {
+      background: transparent;
+      color: var(--red);
+      border: 1px solid var(--red);
+      border-radius: 4px;
+      padding: 4px 8px;
+      font-size: 0.8rem;
+      font-weight: 700;
+      cursor: pointer;
     }
 
     .live-banner {
@@ -180,13 +191,100 @@
       width: 100%;
     }
 
-    .status-msg {
+    .status-msg, .warning-banner {
       padding: 14px;
-      border: 1.5px solid var(--border);
+      border: 1.5px solid var(--red);
+      background-color: rgba(195, 60, 49, 0.08);
+      color: var(--red);
       border-radius: 8px;
-      margin-bottom: 20px;
+      margin-bottom: 18px;
       font-weight: 600;
       display: none;
+    }
+
+    /* Collapsible Sections for Progressive Disclosure */
+    details.collapsible-panel {
+      background: rgba(255, 255, 255, 0.65);
+      border: 1.5px solid var(--border);
+      border-radius: 10px;
+      margin-bottom: 20px;
+      overflow: hidden;
+    }
+
+    details.collapsible-panel summary {
+      padding: 18px 20px;
+      font-size: 1.1rem;
+      font-weight: 800;
+      color: var(--text);
+      cursor: pointer;
+      list-style: none;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: rgba(192, 133, 82, 0.1);
+      user-select: none;
+    }
+
+    details.collapsible-panel summary::-webkit-details-marker {
+      display: none;
+    }
+
+    .summary-badge {
+      font-size: 0.8rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      padding: 4px 10px;
+      border-radius: 20px;
+      border: 1px solid var(--border);
+      background: var(--bg);
+      color: var(--label);
+    }
+
+    .collapsible-body {
+      padding: 20px;
+      border-top: 1.5px solid var(--border);
+    }
+
+    .data-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 14px;
+      font-size: 0.92rem;
+    }
+
+    .data-table th, .data-table td {
+      border-bottom: 1px solid var(--border);
+      padding: 10px 8px;
+      text-align: left;
+    }
+
+    .data-table th {
+      color: var(--label);
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+    }
+
+    .progress-bar-bg {
+      width: 100%;
+      height: 12px;
+      background: rgba(192, 133, 82, 0.2);
+      border-radius: 6px;
+      overflow: hidden;
+      margin: 8px 0;
+    }
+
+    .progress-bar-fill {
+      height: 100%;
+      background: var(--button);
+      transition: width 0.3s ease;
+    }
+
+    .disclaimer-note {
+      font-size: 0.8rem;
+      color: var(--label);
+      margin-top: 14px;
+      font-style: italic;
     }
   </style>
 </head>
@@ -222,7 +320,7 @@
         </div>
       </div>
 
-      <div class="live-banner" id="liveSnapshot">
+      <div class="live-banner">
         <div class="live-stat"><span>Latest INR Price:</span> <strong id="snapInr">—</strong></div>
         <div class="live-stat"><span>Latest USD Price:</span> <strong id="snapUsd">—</strong></div>
         <div class="live-stat"><span>Trailing 30-Day Change:</span> <strong id="snapDrop">—</strong></div>
@@ -235,7 +333,7 @@
 
     <section class="cards-grid">
       <div class="metric-card">
-        <div class="metric-label">Win Rate % (60 Days)</div>
+        <div class="metric-label">Win Rate (60 Days)</div>
         <div class="metric-value text-green" id="cardWinRate">—</div>
         <p class="metric-desc" id="cardWinDesc">
           Percentage of similar historical setups that traded higher in ₹ INR 60 days later.
@@ -243,7 +341,7 @@
       </div>
 
       <div class="metric-card">
-        <div class="metric-label">Typical 60-Day Return</div>
+        <div class="metric-label">Typical 60-Day Return </div>
         <div class="metric-value text-typical" id="cardTypicalReturn">—</div>
         <p class="metric-desc" id="cardTypicalDesc">
           Median 60-day outcome projected from today's INR price.
@@ -270,9 +368,129 @@
         <canvas id="projectionChart"></canvas>
       </div>
     </section>
+
+    <!-- Collapsible Feature 1: 365-Day Drawdown Percentile & DCA Tranche Sizer -->
+    <details class="collapsible-panel" id="dcaCollapsible">
+      <summary>
+        <span>1. 365-Day Drawdown Percentile &amp; Staggered DCA Tranche Sizer (Swing Entry Planner)</span>
+        <span class="summary-badge">Click to Expand ▾</span>
+      </summary>
+      <div class="collapsible-body">
+        <p class="subtitle" style="margin-bottom: 16px;">
+          Avoid deploying 100% of your swing budget on Day 1. This tool checks where today's INR price sits within its trailing 365-day range and splits your capital across 3 staggered limit orders anchored to the historical extra-dip floor.
+        </p>
+
+        <div class="cards-grid" style="margin-bottom: 18px;">
+          <div class="metric-card">
+            <div class="metric-label">365-Day INR Range Position</div>
+            <div class="metric-value text-typical" id="dcaRangePct">—</div>
+            <div class="progress-bar-bg">
+              <div class="progress-bar-fill" id="dcaRangeBar" style="width: 50%;"></div>
+            </div>
+            <p class="metric-desc" id="dcaRangeDesc">0% = 365-Day Low • 100% = 365-Day High</p>
+          </div>
+
+          <div class="metric-card">
+            <div class="metric-label">Drawdown From 365-Day High</div>
+            <div class="metric-value text-red" id="dcaDrawdownHigh">—</div>
+            <p class="metric-desc" id="dcaHighLowDesc">365D Low: — | 365D High: —</p>
+          </div>
+
+          <div class="metric-card">
+            <div class="metric-label">Enter Swing Budget (₹ INR)</div>
+            <input type="number" id="dcaBudgetInput" value="25000" min="1000" step="1000" style="width: 100%; margin-top: 4px;" />
+            <p class="metric-desc" style="margin-top: 8px;">Splits 40% / 30% / 30% across historical drawdown levels.</p>
+          </div>
+        </div>
+
+        <div class="warning-banner" id="dcaLowSampleWarning">
+          Guardrail Active: Fewer than 5 historical matches found for this setup. Widen your scan windows above before sizing swing tranches.
+        </div>
+
+        <table class="data-table" id="dcaTrancheTable">
+          <thead>
+            <tr>
+              <th>Tranche</th>
+              <th>Weight</th>
+              <th>Capital Allocation (₹)</th>
+              <th>Target Limit Price (₹)</th>
+              <th>Buffer Condition</th>
+              <th>Est. Units</th>
+            </tr>
+          </thead>
+          <tbody id="dcaTrancheBody"></tbody>
+        </table>
+
+        <p class="disclaimer-note">
+           Heuristic Notice: Crypto assets have no intrinsic cash-flow floor. "Range Position" reflects trailing 365-day empirical price percentiles, not fundamental valuation. Space limit orders at least 14 days apart if price drops vertically.
+        </p>
+      </div>
+    </details>
+
+    <!-- Collapsible Feature 2: Two-Bucket Paper Ledger & VDA Tax-Drag Simulator -->
+    <details class="collapsible-panel" id="ledgerCollapsible">
+      <summary>
+        <span>2. Two-Bucket Paper Ledger &amp; Indian VDA Tax-Drag Simulator (30% Tax + 1% TDS)</span>
+        <span class="summary-badge">Click to Expand ▾</span>
+      </summary>
+      <div class="collapsible-body">
+        <p class="subtitle" style="margin-bottom: 16px;">
+          Separate long-term "Coffee-Can" holdings (3+ years, set-and-forget) from short-term "Swing" trades (capped at 20% of total capital), while previewing net INR returns after India's flat 30% VDA tax and 1% TDS.
+        </p>
+
+        <div class="controls-grid" style="margin-bottom: 18px;">
+          <div class="field-group">
+            <label for="ledgerBucketSelect">Strategy Bucket</label>
+            <select id="ledgerBucketSelect">
+              <option value="COFFEE">Coffee-Can (3+ Yr Core Hold)</option>
+              <option value="SWING">Swing Trade (60-Day Target)</option>
+            </select>
+          </div>
+
+          <div class="field-group">
+            <label for="ledgerCapitalInput">Capital Deployed (₹ INR)</label>
+            <input type="number" id="ledgerCapitalInput" value="10000" min="500" step="500" />
+          </div>
+
+          <div class="field-group">
+            <button class="action-btn" id="addLedgerBtn">Log Position at Today's INR Price</button>
+          </div>
+        </div>
+
+        <div class="warning-banner" id="swingCapWarning"></div>
+
+        <div class="live-banner" style="margin-top: 0; margin-bottom: 16px; border-top: none;">
+          <div class="live-stat"><span>Coffee-Can Core Capital:</span> <strong id="sumCoffeeInr">₹0</strong></div>
+          <div class="live-stat"><span>Swing Satellite Capital:</span> <strong id="sumSwingInr">₹0</strong></div>
+          <div class="live-stat"><span>Swing Share (Max 20% Guardrail):</span> <strong id="sumSwingShare">0%</strong></div>
+          <div class="live-stat"><span>60D Typical Swing Target (Post-Tax Net):</span> <strong id="simTypicalNetInr">—</strong></div>
+        </div>
+
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Date &amp; Asset</th>
+              <th>Bucket</th>
+              <th>Entry Price (₹)</th>
+              <th>Invested (₹)</th>
+              <th>Gross Value Today (₹)</th>
+              <th>Horizon / Post-Tax Net (30% Tax + 1% TDS)</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody id="ledgerTableBody"></tbody>
+        </table>
+
+        <p class="disclaimer-note">
+          Educational Decision-Support Only: Not investment or tax advice. VDA simulation deducts 1% TDS on gross sale value and 30% tax on positive gains without loss set-off. Stored privately in your browser's localStorage.
+        </p>
+      </div>
+    </details>
   </div>
 
   <script>
+    const STORAGE_KEY = "crypto_dip_scanner_inr_ledger_v1";
+
     const inrFormatter = new Intl.NumberFormat("en-IN", {
       style: "currency",
       currency: "INR",
@@ -292,6 +510,7 @@
     });
 
     let globalData = null;
+    let lastWorkerResult = null;
     let chartInstance = null;
     const worker = new Worker("worker.js");
 
@@ -300,6 +519,7 @@
     const fngToleranceInput = document.getElementById("fngToleranceInput");
     const scanBtn = document.getElementById("scanBtn");
     const statusBox = document.getElementById("statusBox");
+    const dcaBudgetInput = document.getElementById("dcaBudgetInput");
 
     function formatInr(amount) {
       return Math.abs(amount) >= 100
@@ -325,6 +545,7 @@
         });
 
         runMarketScan();
+        renderLedgerTable();
       } catch (err) {
         statusBox.style.display = "block";
         statusBox.textContent =
@@ -359,6 +580,7 @@
 
     worker.onmessage = function (e) {
       const res = e.data;
+      lastWorkerResult = res;
       const ticker = assetSelect.value;
       const latest =
         globalData.assets[ticker].history[
@@ -366,6 +588,9 @@
         ];
 
       document.getElementById("snapMatches").textContent = `${res.matchCount} dates`;
+
+      updateDcaTrancheSection(res);
+      renderLedgerTable();
 
       if (res.matchCount === 0) {
         statusBox.style.display = "block";
@@ -375,7 +600,6 @@
       }
       statusBox.style.display = "none";
 
-      // Populate Plain-English Cards
       document.getElementById("cardWinRate").textContent = `${res.winRatePct}%`;
       document.getElementById("cardWinDesc").textContent =
         `Across ${res.matchCount} independent historical setups (minimum 14 days apart), ${res.winRatePct}% finished higher after 60 days.`;
@@ -394,6 +618,221 @@
 
       renderChart(res, latest.close_inr);
     };
+
+    function updateDcaTrancheSection(res) {
+      if (!res || !res.drawdown365) return;
+      const d = res.drawdown365;
+
+      document.getElementById("dcaRangePct").textContent = `${d.rangePositionPct}% Percentile`;
+      document.getElementById("dcaRangeBar").style.width = `${Math.min(100, Math.max(0, d.rangePositionPct))}%`;
+      document.getElementById("dcaDrawdownHigh").textContent = `${d.drawdownFromHighPct}%`;
+      document.getElementById("dcaHighLowDesc").textContent =
+        `365D Low: ${formatInr(d.min365Inr)} | 365D High: ${formatInr(d.max365Inr)}`;
+
+      const lowSampleWarn = document.getElementById("dcaLowSampleWarning");
+      const tableEl = document.getElementById("dcaTrancheTable");
+      const tbody = document.getElementById("dcaTrancheBody");
+
+      if (res.matchCount < 5) {
+        lowSampleWarn.style.display = "block";
+        tableEl.style.display = "none";
+        return;
+      }
+
+      lowSampleWarn.style.display = "none";
+      tableEl.style.display = "table";
+
+      const totalBudget = Math.max(0, Number(dcaBudgetInput.value) || 25000);
+      const tranches = [
+        {
+          name: "Tranche 1 (Immediate)",
+          weight: "40%",
+          allocInr: totalBudget * 0.4,
+          priceInr: d.tranche1Inr,
+          condition: "Spot Entry (Day 0)",
+        },
+        {
+          name: "Tranche 2 (Mid-Dip Limit)",
+          weight: "30%",
+          allocInr: totalBudget * 0.3,
+          priceInr: d.tranche2Inr,
+          condition: `50% of Typical Extra Dip (${d.tranche2DipPct}%)`,
+        },
+        {
+          name: "Tranche 3 (Deep Floor Limit)",
+          weight: "30%",
+          allocInr: totalBudget * 0.3,
+          priceInr: d.tranche3Inr,
+          condition: `Full Typical Extra Dip (${d.tranche3DipPct}%)`,
+        },
+      ];
+
+      tbody.innerHTML = tranches
+        .map((t) => {
+          const units = t.priceInr > 0 ? (t.allocInr / t.priceInr).toFixed(5) : "0";
+          return `
+            <tr>
+              <td><strong>${t.name}</strong></td>
+              <td>${t.weight}</td>
+              <td>${formatInr(t.allocInr)}</td>
+              <td>${formatInr(t.priceInr)}</td>
+              <td>${t.condition}</td>
+              <td>${units}</td>
+            </tr>
+          `;
+        })
+        .join("");
+    }
+
+    function calculateVdaNetInr(investedInr, grossSaleInr) {
+      const tds = grossSaleInr * 0.01;
+      const gain = grossSaleInr - investedInr;
+      const tax30 = gain > 0 ? gain * 0.3 : 0;
+      const netInr = grossSaleInr - tds - tax30;
+      const netProfit = netInr - investedInr;
+      const netReturnPct = investedInr > 0 ? (netProfit / investedInr) * 100 : 0;
+      return { tds, tax30, netInr, netProfit, netReturnPct };
+    }
+
+    function getLedgerEntries() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        return raw ? JSON.parse(raw) : [];
+      } catch (e) {
+        return [];
+      }
+    }
+
+    function saveLedgerEntries(entries) {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(entries));
+    }
+
+    function addLedgerPosition() {
+      if (!globalData) return;
+      const ticker = assetSelect.value;
+      const history = globalData.assets[ticker].history;
+      const latest = history[history.length - 1];
+
+      const bucket = document.getElementById("ledgerBucketSelect").value;
+      const capitalInr = Math.max(0, Number(document.getElementById("ledgerCapitalInput").value) || 0);
+      if (capitalInr <= 0) return;
+
+      const entries = getLedgerEntries();
+      const warningEl = document.getElementById("swingCapWarning");
+
+      const currentCoffee = entries
+        .filter((e) => e.bucket === "COFFEE")
+        .reduce((acc, e) => acc + e.investedInr, 0);
+      const currentSwing = entries
+        .filter((e) => e.bucket === "SWING")
+        .reduce((acc, e) => acc + e.investedInr, 0);
+
+      const nextSwing = bucket === "SWING" ? currentSwing + capitalInr : currentSwing;
+      const nextTotal = currentCoffee + nextSwing;
+
+      if (bucket === "SWING" && nextTotal > 0 && nextSwing / nextTotal > 0.2) {
+        warningEl.style.display = "block";
+        warningEl.textContent =
+          `Guardrail Alert: Logging this Swing position pushes your Swing allocation to ${((nextSwing / nextTotal) * 100).toFixed(1)}% of total capital (exceeding the recommended 20% satellite cap). Position logged with caution.`;
+      } else {
+        warningEl.style.display = "none";
+      }
+
+      entries.push({
+        id: Date.now(),
+        date: latest.date,
+        ticker: ticker,
+        bucket: bucket,
+        entryInr: latest.close_inr,
+        investedInr: capitalInr,
+        units: capitalInr / latest.close_inr,
+        entryDrop30d: latest.drop_30d_pct,
+        entryFng: latest.fng,
+      });
+
+      saveLedgerEntries(entries);
+      renderLedgerTable();
+    }
+
+    window.deleteLedgerEntry = function (id) {
+      const filtered = getLedgerEntries().filter((e) => e.id !== id);
+      saveLedgerEntries(filtered);
+      renderLedgerTable();
+    };
+
+    function renderLedgerTable() {
+      if (!globalData) return;
+      const entries = getLedgerEntries();
+      const tbody = document.getElementById("ledgerTableBody");
+
+      let coffeeSum = 0;
+      let swingSum = 0;
+      entries.forEach((e) => {
+        if (e.bucket === "COFFEE") coffeeSum += e.investedInr;
+        else swingSum += e.investedInr;
+      });
+
+      const totalCap = coffeeSum + swingSum;
+      const swingSharePct = totalCap > 0 ? ((swingSum / totalCap) * 100).toFixed(1) : "0.0";
+
+      document.getElementById("sumCoffeeInr").textContent = formatInr(coffeeSum);
+      document.getElementById("sumSwingInr").textContent = formatInr(swingSum);
+      document.getElementById("sumSwingShare").textContent = `${swingSharePct}%`;
+
+      // Update live preview of what a 60D typical return yields after 30% tax + 1% TDS
+      const simCapital = Math.max(0, Number(document.getElementById("ledgerCapitalInput").value) || 10000);
+      if (lastWorkerResult && lastWorkerResult.matchCount > 0) {
+        const grossProjected = simCapital * (1 + lastWorkerResult.typicalReturnPct / 100);
+        const vdaSim = calculateVdaNetInr(simCapital, grossProjected);
+        const sign = vdaSim.netReturnPct >= 0 ? "+" : "";
+        document.getElementById("simTypicalNetInr").textContent =
+          `${formatInr(vdaSim.netInr)} (${sign}${vdaSim.netReturnPct.toFixed(2)}% net after tax/TDS)`;
+      } else {
+        document.getElementById("simTypicalNetInr").textContent = "—";
+      }
+
+      if (!entries.length) {
+        tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; color: var(--label);">No paper positions logged yet. Choose a bucket above to test allocations.</td></tr>`;
+        return;
+      }
+
+      tbody.innerHTML = entries
+        .map((item) => {
+          const assetHistory = globalData.assets[item.ticker]?.history || [];
+          const currentInr = assetHistory.length
+            ? assetHistory[assetHistory.length - 1].close_inr
+            : item.entryInr;
+          const grossNow = item.units * currentInr;
+
+          let statusColumnHtml = "";
+          if (item.bucket === "COFFEE") {
+            const unlockYear = parseInt(item.date.slice(0, 4), 10) + 3;
+            const unlockDate = `${unlockYear}${item.date.slice(4)}`;
+            statusColumnHtml = `<span class="text-typical"><strong>Locked Core until ${unlockDate}</strong> (${item.units.toFixed(4)} ${item.ticker}) — Short-term PnL hidden</span>`;
+          } else {
+            const vda = calculateVdaNetInr(item.investedInr, grossNow);
+            const sign = vda.netProfit >= 0 ? "+" : "";
+            const cls = vda.netProfit >= 0 ? "text-green" : "text-red";
+            statusColumnHtml = `
+              <div class="${cls}"><strong>Net: ${formatInr(vda.netInr)} (${sign}${vda.netReturnPct.toFixed(1)}%)</strong></div>
+              <div style="font-size:0.78rem; color: var(--label);">30% Tax: ${formatInr(vda.tax30)} | 1% TDS: ${formatInr(vda.tds)}</div>
+            `;
+          }
+
+          return `
+            <tr>
+              <td><strong>${item.ticker}</strong><br/><span style="font-size:0.78rem; color:var(--label);">${item.date}</span></td>
+              <td>${item.bucket === "COFFEE" ? "Coffee-Can (3Y+)" : "Swing (60D)"}</td>
+              <td>${formatInr(item.entryInr)}</td>
+              <td>${formatInr(item.investedInr)}</td>
+              <td>${formatInr(grossNow)}</td>
+              <td>${statusColumnHtml}</td>
+              <td><button class="delete-btn" onclick="deleteLedgerEntry(${item.id})">Remove</button></td>
+            </tr>
+          `;
+        })
+        .join("");
+    }
 
     function renderChart(res, baseInrPrice) {
       const ctx = document.getElementById("projectionChart").getContext("2d");
@@ -522,6 +961,9 @@
 
     scanBtn.addEventListener("click", runMarketScan);
     assetSelect.addEventListener("change", runMarketScan);
+    dcaBudgetInput.addEventListener("input", () => updateDcaTrancheSection(lastWorkerResult));
+    document.getElementById("ledgerCapitalInput").addEventListener("input", renderLedgerTable);
+    document.getElementById("addLedgerBtn").addEventListener("click", addLedgerPosition);
 
     loadHistoryJson();
   </script>
