@@ -478,7 +478,6 @@
       </div>
     </details>
   </div>
-
   <script>
     const STORAGE_KEY = "crypto_dip_scanner_inr_ledger_v1";
 
@@ -512,6 +511,12 @@
     const statusBox = document.getElementById("statusBox");
     const dcaBudgetInput = document.getElementById("dcaBudgetInput");
 
+    // Null-safe helper so missing/customized HTML IDs never crash the app
+    function setText(id, text) {
+      const el = document.getElementById(id);
+      if (el) el.textContent = text;
+    }
+
     function formatInr(amount) {
       return Math.abs(amount) >= 100
         ? inrWholeFormatter.format(amount)
@@ -520,13 +525,24 @@
 
     async function loadHistoryJson() {
       try {
-        const resp = await fetch("history.json");
-        if (!resp.ok) throw new Error("Could not load history.json");
+        // Cache-busting query string ensures fresh worker/data loads on GitHub Pages
+        const resp = await fetch("history.json?v=" + Date.now());
+        if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
         globalData = await resp.json();
+      } catch (err) {
+        console.error("Failed to fetch history.json:", err);
+        if (statusBox) {
+          statusBox.style.display = "block";
+          statusBox.textContent =
+            "Run seed_from_csv.py first to generate history.json before opening index.html.";
+        }
+        return;
+      }
 
-        document.getElementById("lastUpdatedLabel").textContent =
-          `Last Updated: ${globalData.last_updated}`;
+      // UI initialization outside the fetch try/catch so UI errors don't show a fake file error
+      setText("lastUpdatedLabel", `Last Updated: ${globalData.last_updated}`);
 
+      if (assetSelect) {
         assetSelect.innerHTML = "";
         Object.keys(globalData.assets).forEach((ticker) => {
           const opt = document.createElement("option");
@@ -534,18 +550,18 @@
           opt.textContent = `${ticker} — ${globalData.assets[ticker].name}`;
           assetSelect.appendChild(opt);
         });
+      }
 
-        runMarketScan();
+      runMarketScan();
+      try {
         renderLedgerTable();
-      } catch (err) {
-        statusBox.style.display = "block";
-        statusBox.textContent =
-          "Run seed_from_csv.py first to generate history.json before opening index.html.";
+      } catch (e) {
+        console.warn("Ledger table skipped:", e);
       }
     }
 
     function runMarketScan() {
-      if (!globalData) return;
+      if (!globalData || !assetSelect) return;
       const ticker = assetSelect.value;
       const assetObj = globalData.assets[ticker];
       if (!assetObj || !assetObj.history.length) return;
@@ -553,19 +569,21 @@
       const history = assetObj.history;
       const latest = history[history.length - 1];
 
-      document.getElementById("snapInr").textContent = formatInr(latest.close_inr);
-      document.getElementById("snapUsd").textContent = usdFormatter.format(latest.close_usd);
-      document.getElementById("snapDrop").textContent =
-        `${latest.drop_30d_pct >= 0 ? "+" : ""}${latest.drop_30d_pct}%`;
-      document.getElementById("snapFng").textContent = `${latest.fng} / 100`;
+      setText("snapInr", formatInr(latest.close_inr));
+      setText("snapUsd", usdFormatter.format(latest.close_usd));
+      setText(
+        "snapDrop",
+        `${latest.drop_30d_pct >= 0 ? "+" : ""}${latest.drop_30d_pct}%`
+      );
+      setText("snapFng", `${latest.fng} / 100`);
 
       worker.postMessage({
         history: history,
         currentInrPrice: latest.close_inr,
         targetDropPct: latest.drop_30d_pct ?? 0,
-        dropTolerance: Number(dropToleranceInput.value) || 8,
+        dropTolerance: Number(dropToleranceInput?.value) || 8,
         targetFng: latest.fng ?? 50,
-        fngTolerance: Number(fngToleranceInput.value) || 12,
+        fngTolerance: Number(fngToleranceInput?.value) || 12,
       });
     }
 
@@ -573,67 +591,122 @@
       const res = e.data;
       lastWorkerResult = res;
       const ticker = assetSelect.value;
-      const latest =
-        globalData.assets[ticker].history[
-          globalData.assets[ticker].history.length - 1
-        ];
+      const history = globalData.assets[ticker].history;
+      const latest = history[history.length - 1];
 
-      document.getElementById("snapMatches").textContent = `${res.matchCount} dates`;
-
-      updateDcaTrancheSection(res);
-      renderLedgerTable();
+      setText("snapMatches", `${res.matchCount} dates`);
 
       if (res.matchCount === 0) {
-        statusBox.style.display = "block";
-        statusBox.textContent =
-          "No historical matches found for this narrow range. Try widening the 30D Drop or Fear & Greed window.";
+        if (statusBox) {
+          statusBox.style.display = "block";
+          statusBox.textContent =
+            "No historical matches found for this narrow range. Try widening the 30D Drop or Fear & Greed window.";
+        }
         return;
       }
-      statusBox.style.display = "none";
+      if (statusBox) statusBox.style.display = "none";
 
-      document.getElementById("cardWinRate").textContent = `${res.winRatePct}%`;
-      document.getElementById("cardWinDesc").textContent =
-        `Across ${res.matchCount} independent historical setups (minimum 14 days apart), ${res.winRatePct}% finished higher after 60 days.`;
+      // 1. Update Core Cards & Chart FIRST so they always populate
+      setText("cardWinRate", `${res.winRatePct}%`);
+      setText(
+        "cardWinDesc",
+        `Across ${res.matchCount} independent historical setups (minimum 14 days apart), ${res.winRatePct}% finished higher after 60 days.`
+      );
 
       const returnSign = res.typicalReturnPct >= 0 ? "+" : "";
       const deltaSign = res.typicalDeltaInr >= 0 ? "+" : "-";
-      document.getElementById("cardTypicalReturn").textContent =
-        `${returnSign}${res.typicalReturnPct}% (${deltaSign}${formatInr(Math.abs(res.typicalDeltaInr))})`;
-      document.getElementById("cardTypicalDesc").textContent =
-        `Projects a typical 60-day target of ${formatInr(res.typicalProjectedInr)} from today's ${formatInr(latest.close_inr)} price.`;
+      setText(
+        "cardTypicalReturn",
+        `${returnSign}${res.typicalReturnPct}% (${deltaSign}${formatInr(Math.abs(res.typicalDeltaInr))})`
+      );
+      setText(
+        "cardTypicalDesc",
+        `Projects a typical 60-day target of ${formatInr(res.typicalProjectedInr)} from today's ${formatInr(latest.close_inr)} price.`
+      );
 
-      document.getElementById("cardExtraDip").textContent =
-        `${res.typicalExtraDipPct}% (${formatInr(res.typicalExtraDipFloorInr)})`;
-      document.getElementById("cardExtraDipDesc").textContent =
-        `Historically, price dipped an extra ${Math.abs(res.typicalExtraDipPct)}% (down by ${formatInr(Math.abs(res.typicalExtraDipDeltaInr))}) before staging its 60-day move.`;
+      setText(
+        "cardExtraDip",
+        `${res.typicalExtraDipPct}% (${formatInr(res.typicalExtraDipFloorInr)})`
+      );
+      setText(
+        "cardExtraDipDesc",
+        `Historically, price dipped an extra ${Math.abs(res.typicalExtraDipPct)}% (down by ${formatInr(Math.abs(res.typicalExtraDipDeltaInr))}) before staging its 60-day move.`
+      );
 
       renderChart(res, latest.close_inr);
+
+      // 2. Update Collapsible Modules Safely (Even if worker.js is cached by browser)
+      try {
+        updateDcaTrancheSection(res, history, latest.close_inr);
+        renderLedgerTable();
+      } catch (err) {
+        console.warn("Collapsible section update warning:", err);
+      }
     };
 
-    function updateDcaTrancheSection(res) {
-      if (!res || !res.drawdown365) return;
-      const d = res.drawdown365;
+    function updateDcaTrancheSection(res, history, currentInrPrice) {
+      if (!res) return;
 
-      document.getElementById("dcaRangePct").textContent = `${d.rangePositionPct}% Percentile`;
-      document.getElementById("dcaRangeBar").style.width = `${Math.min(100, Math.max(0, d.rangePositionPct))}%`;
-      document.getElementById("dcaDrawdownHigh").textContent = `${d.drawdownFromHighPct}%`;
-      document.getElementById("dcaHighLowDesc").textContent =
-        `365D Low: ${formatInr(d.min365Inr)} | 365D High: ${formatInr(d.max365Inr)}`;
+      // Fallback calculation if browser cached the older worker.js without drawdown365
+      let d = res.drawdown365;
+      if (!d && history && history.length) {
+        const last365 = history.slice(-365);
+        const prices365 = last365.map((r) => r.close_inr);
+        const min365Inr = Math.min(...prices365);
+        const max365Inr = Math.max(...prices365);
+        const rangePositionPct =
+          max365Inr > min365Inr
+            ? Number(
+                (
+                  ((currentInrPrice - min365Inr) / (max365Inr - min365Inr)) *
+                  100
+                ).toFixed(1)
+              )
+            : 50;
+        const drawdownFromHighPct = Number(
+          (((currentInrPrice - max365Inr) / max365Inr) * 100).toFixed(2)
+        );
+        const halfDipPct = Number(((res.typicalExtraDipPct || 0) / 2).toFixed(2));
+        d = {
+          min365Inr,
+          max365Inr,
+          rangePositionPct,
+          drawdownFromHighPct,
+          tranche1Inr: Math.round(currentInrPrice),
+          tranche2Inr: Math.round(currentInrPrice * (1 + halfDipPct / 100)),
+          tranche2DipPct: halfDipPct,
+          tranche3Inr: res.typicalExtraDipFloorInr || Math.round(currentInrPrice),
+          tranche3DipPct: res.typicalExtraDipPct || 0,
+        };
+      }
+      if (!d) return;
+
+      setText("dcaRangePct", `${d.rangePositionPct}% Percentile`);
+      const rangeBar = document.getElementById("dcaRangeBar");
+      if (rangeBar) {
+        rangeBar.style.width = `${Math.min(100, Math.max(0, d.rangePositionPct))}%`;
+      }
+      setText("dcaDrawdownHigh", `${d.drawdownFromHighPct}%`);
+      setText(
+        "dcaHighLowDesc",
+        `365D Low: ${formatInr(d.min365Inr)} | 365D High: ${formatInr(d.max365Inr)}`
+      );
 
       const lowSampleWarn = document.getElementById("dcaLowSampleWarning");
       const tableEl = document.getElementById("dcaTrancheTable");
       const tbody = document.getElementById("dcaTrancheBody");
+      if (!tbody || !tableEl) return;
 
       if (res.matchCount < 5) {
-        lowSampleWarn.style.display = "block";
+        if (lowSampleWarn) lowSampleWarn.style.display = "block";
         tableEl.style.display = "none";
         return;
       }
 
-      lowSampleWarn.style.display = "none";
+      if (lowSampleWarn) lowSampleWarn.style.display = "none";
       tableEl.style.display = "table";
 
-      const totalBudget = Math.max(0, Number(dcaBudgetInput.value) || 25000);
+      const totalBudget = Math.max(0, Number(dcaBudgetInput?.value) || 25000);
       const tranches = [
         {
           name: "Tranche 1 (Immediate)",
@@ -660,7 +733,8 @@
 
       tbody.innerHTML = tranches
         .map((t) => {
-          const units = t.priceInr > 0 ? (t.allocInr / t.priceInr).toFixed(5) : "0";
+          const units =
+            t.priceInr > 0 ? (t.allocInr / t.priceInr).toFixed(5) : "0";
           return `
             <tr>
               <td><strong>${t.name}</strong></td>
@@ -704,8 +778,12 @@
       const history = globalData.assets[ticker].history;
       const latest = history[history.length - 1];
 
-      const bucket = document.getElementById("ledgerBucketSelect").value;
-      const capitalInr = Math.max(0, Number(document.getElementById("ledgerCapitalInput").value) || 0);
+      const bucketEl = document.getElementById("ledgerBucketSelect");
+      const capEl = document.getElementById("ledgerCapitalInput");
+      if (!bucketEl || !capEl) return;
+
+      const bucket = bucketEl.value;
+      const capitalInr = Math.max(0, Number(capEl.value) || 0);
       if (capitalInr <= 0) return;
 
       const entries = getLedgerEntries();
@@ -718,15 +796,17 @@
         .filter((e) => e.bucket === "SWING")
         .reduce((acc, e) => acc + e.investedInr, 0);
 
-      const nextSwing = bucket === "SWING" ? currentSwing + capitalInr : currentSwing;
+      const nextSwing =
+        bucket === "SWING" ? currentSwing + capitalInr : currentSwing;
       const nextTotal = currentCoffee + nextSwing;
 
-      if (bucket === "SWING" && nextTotal > 0 && nextSwing / nextTotal > 0.2) {
-        warningEl.style.display = "block";
-        warningEl.textContent =
-          `Guardrail Alert: Logging this Swing position pushes your Swing allocation to ${((nextSwing / nextTotal) * 100).toFixed(1)}% of total capital (exceeding the recommended 20% satellite cap). Position logged with caution.`;
-      } else {
-        warningEl.style.display = "none";
+      if (warningEl) {
+        if (bucket === "SWING" && nextTotal > 0 && nextSwing / nextTotal > 0.2) {
+          warningEl.style.display = "block";
+          warningEl.textContent = `Guardrail Alert: Logging this Swing position pushes your Swing allocation to ${((nextSwing / nextTotal) * 100).toFixed(1)}% of total capital (exceeding the recommended 20% satellite cap). Position logged with caution.`;
+        } else {
+          warningEl.style.display = "none";
+        }
       }
 
       entries.push({
@@ -764,23 +844,29 @@
       });
 
       const totalCap = coffeeSum + swingSum;
-      const swingSharePct = totalCap > 0 ? ((swingSum / totalCap) * 100).toFixed(1) : "0.0";
+      const swingSharePct =
+        totalCap > 0 ? ((swingSum / totalCap) * 100).toFixed(1) : "0.0";
 
-      document.getElementById("sumCoffeeInr").textContent = formatInr(coffeeSum);
-      document.getElementById("sumSwingInr").textContent = formatInr(swingSum);
-      document.getElementById("sumSwingShare").textContent = `${swingSharePct}%`;
+      setText("sumCoffeeInr", formatInr(coffeeSum));
+      setText("sumSwingInr", formatInr(swingSum));
+      setText("sumSwingShare", `${swingSharePct}%`);
 
-      // Update live preview of what a 60D typical return yields after 30% tax + 1% TDS
-      const simCapital = Math.max(0, Number(document.getElementById("ledgerCapitalInput").value) || 10000);
+      const capInput = document.getElementById("ledgerCapitalInput");
+      const simCapital = Math.max(0, Number(capInput?.value) || 10000);
       if (lastWorkerResult && lastWorkerResult.matchCount > 0) {
-        const grossProjected = simCapital * (1 + lastWorkerResult.typicalReturnPct / 100);
+        const grossProjected =
+          simCapital * (1 + lastWorkerResult.typicalReturnPct / 100);
         const vdaSim = calculateVdaNetInr(simCapital, grossProjected);
         const sign = vdaSim.netReturnPct >= 0 ? "+" : "";
-        document.getElementById("simTypicalNetInr").textContent =
-          `${formatInr(vdaSim.netInr)} (${sign}${vdaSim.netReturnPct.toFixed(2)}% net after tax/TDS)`;
+        setText(
+          "simTypicalNetInr",
+          `${formatInr(vdaSim.netInr)} (${sign}${vdaSim.netReturnPct.toFixed(2)}% net after tax/TDS)`
+        );
       } else {
-        document.getElementById("simTypicalNetInr").textContent = "—";
+        setText("simTypicalNetInr", "—");
       }
+
+      if (!tbody) return;
 
       if (!entries.length) {
         tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; color: var(--label);">No paper positions logged yet. Choose a bucket above to test allocations.</td></tr>`;
@@ -826,7 +912,9 @@
     }
 
     function renderChart(res, baseInrPrice) {
-      const ctx = document.getElementById("projectionChart").getContext("2d");
+      const canvasEl = document.getElementById("projectionChart");
+      if (!canvasEl) return;
+      const ctx = canvasEl.getContext("2d");
       if (chartInstance) {
         chartInstance.destroy();
       }
@@ -950,11 +1038,20 @@
       });
     }
 
-    scanBtn.addEventListener("click", runMarketScan);
-    assetSelect.addEventListener("change", runMarketScan);
-    dcaBudgetInput.addEventListener("input", () => updateDcaTrancheSection(lastWorkerResult));
-    document.getElementById("ledgerCapitalInput").addEventListener("input", renderLedgerTable);
-    document.getElementById("addLedgerBtn").addEventListener("click", addLedgerPosition);
+    scanBtn?.addEventListener("click", runMarketScan);
+    assetSelect?.addEventListener("change", runMarketScan);
+    dcaBudgetInput?.addEventListener("input", () => {
+      const ticker = assetSelect?.value;
+      const history = globalData?.assets?.[ticker]?.history;
+      const latestInr = history?.length ? history[history.length - 1].close_inr : 0;
+      updateDcaTrancheSection(lastWorkerResult, history, latestInr);
+    });
+    document
+      .getElementById("ledgerCapitalInput")
+      ?.addEventListener("input", renderLedgerTable);
+    document
+      .getElementById("addLedgerBtn")
+      ?.addEventListener("click", addLedgerPosition);
 
     loadHistoryJson();
   </script>
