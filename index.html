@@ -372,14 +372,10 @@
     <!-- Collapsible Feature 1: 365-Day Drawdown Percentile & DCA Tranche Sizer -->
     <details class="collapsible-panel" id="dcaCollapsible">
       <summary>
-        <span>1. 365-Day Drawdown Percentile &amp; Staggered DCA Tranche Sizer (Swing Entry Planner)</span>
+        <span>1. 365-Day Drawdown Percentile &amp; DCA </span>
         <span class="summary-badge">Click to Expand ▾</span>
       </summary>
       <div class="collapsible-body">
-        <p class="subtitle" style="margin-bottom: 16px;">
-          Avoid deploying 100% of your swing budget on Day 1. This tool checks where today's INR price sits within its trailing 365-day range and splits your capital across 3 staggered limit orders anchored to the historical extra-dip floor.
-        </p>
-
         <div class="cards-grid" style="margin-bottom: 18px;">
           <div class="metric-card">
             <div class="metric-label">365-Day INR Range Position</div>
@@ -412,8 +408,8 @@
             <tr>
               <th>Tranche</th>
               <th>Weight</th>
-              <th>Capital Allocation (₹)</th>
-              <th>Target Limit Price (₹)</th>
+              <th>Capital Allocation </th>
+              <th>Target Limit Price </th>
               <th>Buffer Condition</th>
               <th>Est. Units</th>
             </tr>
@@ -422,7 +418,7 @@
         </table>
 
         <p class="disclaimer-note">
-           Heuristic Notice: Crypto assets have no intrinsic cash-flow floor. "Range Position" reflects trailing 365-day empirical price percentiles, not fundamental valuation. Space limit orders at least 14 days apart if price drops vertically.
+          Crypto assets have no intrinsic cash-flow floor; hence, avoid deploying 100% of your trading capital on Day 1. The "Range Position" metric reflects trailing 365-day empirical price percentiles, not fundamental valuation. Space out your limit orders at least 14 days apart if the price drops vertically.
         </p>
       </div>
     </details>
@@ -430,20 +426,16 @@
     <!-- Collapsible Feature 2: Two-Bucket Paper Ledger & VDA Tax-Drag Simulator -->
     <details class="collapsible-panel" id="ledgerCollapsible">
       <summary>
-        <span>2. Two-Bucket Paper Ledger &amp; Indian VDA Tax-Drag Simulator (30% Tax + 1% TDS)</span>
+        <span>2. Ledger &amp; Indian Tax Simulator </span>
         <span class="summary-badge">Click to Expand ▾</span>
       </summary>
       <div class="collapsible-body">
-        <p class="subtitle" style="margin-bottom: 16px;">
-          Separate long-term "Coffee-Can" holdings (3+ years, set-and-forget) from short-term "Swing" trades (capped at 20% of total capital), while previewing net INR returns after India's flat 30% VDA tax and 1% TDS.
-        </p>
-
         <div class="controls-grid" style="margin-bottom: 18px;">
           <div class="field-group">
             <label for="ledgerBucketSelect">Strategy Bucket</label>
             <select id="ledgerBucketSelect">
-              <option value="COFFEE">Coffee-Can (3+ Yr Core Hold)</option>
-              <option value="SWING">Swing Trade (60-Day Target)</option>
+              <option value="COFFEE">Coffee-Can (Multiyear hold)</option>
+              <option value="SWING">Swing Trade (Multiday or Multimonth)</option>
             </select>
           </div>
 
@@ -453,16 +445,16 @@
           </div>
 
           <div class="field-group">
-            <button class="action-btn" id="addLedgerBtn">Log Position at Today's INR Price</button>
+            <button class="action-btn" id="addLedgerBtn">Log Position</button>
           </div>
         </div>
 
         <div class="warning-banner" id="swingCapWarning"></div>
 
         <div class="live-banner" style="margin-top: 0; margin-bottom: 16px; border-top: none;">
-          <div class="live-stat"><span>Coffee-Can Core Capital:</span> <strong id="sumCoffeeInr">₹0</strong></div>
-          <div class="live-stat"><span>Swing Satellite Capital:</span> <strong id="sumSwingInr">₹0</strong></div>
-          <div class="live-stat"><span>Swing Share (Max 20% Guardrail):</span> <strong id="sumSwingShare">0%</strong></div>
+          <div class="live-stat"><span>Coffee-Can Capital:</span> <strong id="sumCoffeeInr">₹0</strong></div>
+          <div class="live-stat"><span>Swing Capital:</span> <strong id="sumSwingInr">₹0</strong></div>
+          <div class="live-stat"><span>Swing Share (Max 20%):</span> <strong id="sumSwingShare">0%</strong></div>
           <div class="live-stat"><span>60D Typical Swing Target (Post-Tax Net):</span> <strong id="simTypicalNetInr">—</strong></div>
         </div>
 
@@ -471,10 +463,10 @@
             <tr>
               <th>Date &amp; Asset</th>
               <th>Bucket</th>
-              <th>Entry Price (₹)</th>
-              <th>Invested (₹)</th>
-              <th>Gross Value Today (₹)</th>
-              <th>Horizon / Post-Tax Net (30% Tax + 1% TDS)</th>
+              <th>Entry Price</th>
+              <th>Invested</th>
+              <th>Gross Value Today</th>
+              <th>Post-Tax Net</th>
               <th>Action</th>
             </tr>
           </thead>
@@ -482,8 +474,8 @@
         </table>
 
         <p class="disclaimer-note">
-          Educational Decision-Support Only: Not investment or tax advice. VDA simulation deducts 1% TDS on gross sale value and 30% tax on positive gains without loss set-off. Stored privately in your browser's localStorage.
-        </p>
+          Note 1 : This tool is only for Educational Decision-Support ; it isn't investment or tax advice. 
+          Note 2 : The VDA simulation deducts 1% TDS on gross sale value and 30% tax on positive gains without loss set-off. 
       </div>
     </details>
   </div>
